@@ -377,8 +377,8 @@ export async function fetchSearchRecipes(activePantryNames: string[] = []): Prom
           const rawSteps = Array.isArray(item.recipe)
             ? item.recipe
             : Array.isArray(item.steps)
-            ? item.steps
-            : ['Prepare ingredients.', 'Cook until golden.', 'Serve hot.'];
+              ? item.steps
+              : ['Prepare ingredients.', 'Cook until golden.', 'Serve hot.'];
 
           const steps = rawSteps.map((stepText: any, stepIdx: number) => ({
             stepNumber: stepIdx + 1,
@@ -511,8 +511,8 @@ export async function fetchPopularWorldRecipes(): Promise<Recipe[]> {
           const rawSteps = Array.isArray(item.recipe)
             ? item.recipe
             : Array.isArray(item.steps)
-            ? item.steps
-            : ['Prepare ingredients.', 'Cook until golden and fragrant.', 'Serve hot.'];
+              ? item.steps
+              : ['Prepare ingredients.', 'Cook until golden and fragrant.', 'Serve hot.'];
 
           const steps = rawSteps.map((stepText: any, stepIdx: number) => ({
             stepNumber: stepIdx + 1,

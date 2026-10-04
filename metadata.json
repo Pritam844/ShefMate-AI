@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix Remix SnackHack 3D Showcase",
+  "description": "High-end UI/UX showcase presentation featuring the SnackHack mobile app in futuristic 3D claymorphic style with instant ingredient search, missing item quick-commerce checkout, and step-by-step cooking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

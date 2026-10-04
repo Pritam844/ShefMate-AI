@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment variables
+.env
+.env.local
+.env.production
+!.env.example
+
+# IDE & OS
+.DS_Store
+*.log
+.vscode/
+.idea/
+
+# Test coverage
+coverage/
+
+# Vercel
+.vercel

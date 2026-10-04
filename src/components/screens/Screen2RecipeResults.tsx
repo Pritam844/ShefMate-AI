@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Clock, Flame, ChevronRight, ArrowLeft, Search, X, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Recipe } from '../../types/snackhack';
+import { sounds } from '../../services/soundService';
 
 interface Props {
   recipes: Recipe[];
@@ -114,7 +115,10 @@ export const Screen2RecipeResults: React.FC<Props> = ({
           {searchQuery && (
             <button
               type="button"
-              onClick={() => setSearchQuery('')}
+              onClick={() => {
+                sounds.playClick();
+                setSearchQuery('');
+              }}
               className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
@@ -140,7 +144,10 @@ export const Screen2RecipeResults: React.FC<Props> = ({
         ].map((item) => (
           <button
             key={item.id}
-            onClick={() => setFilterMode(item.id as any)}
+            onClick={() => {
+              sounds.playFilterClick();
+              setFilterMode(item.id as any);
+            }}
             className={`px-3 py-1.5 text-xs font-bold rounded-xl whitespace-nowrap transition-all cursor-pointer ${
               filterMode === item.id
                 ? 'clay-chip-active shadow-sm'

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Flame, Clock } from 'lucide-react';
+import { Home, Flame, Clock, Volume2, VolumeX } from 'lucide-react';
 import { ScreenId, Ingredient, Recipe, UserAccount } from './types/snackhack';
-import { INITIAL_INGREDIENTS, RECIPES } from './data/mockData';
+import { INITIAL_INGREDIENTS } from './data/mockData';
 import { fetchSearchRecipes, subscribeToAuth, logoutUser } from './services/firebaseService';
 import {
   toggleRecipeSave,
   removeRecipeFromSaved,
   addRecipeToRecent,
 } from './services/userService';
+import { sounds } from './services/soundService';
 import { Screen1IngredientInput } from './components/screens/Screen1IngredientInput';
 import { Screen2RecipeResults } from './components/screens/Screen2RecipeResults';
 import { Screen5RecipeDetailCooking } from './components/screens/Screen5RecipeDetailCooking';
@@ -16,20 +17,28 @@ import { RecentRecipesScreen } from './components/screens/RecentRecipesScreen';
 
 export default function App() {
   const [ingredients, setIngredients] = useState<Ingredient[]>(INITIAL_INGREDIENTS);
-  const [recipes, setRecipes] = useState<Recipe[]>(RECIPES);
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe>(RECIPES[0]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
-  // Current active screen in the Android app: screen1 (Input), screen2 (Results), screen5 (Cooking Detail)
+  // Active navigation tracking
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('screen1');
-
-  // Bottom Navigation State for mobile: 'home' | 'popular' | 'recent'
   const [activeNavTab, setActiveNavTab] = useState<'home' | 'popular' | 'recent'>('home');
+  const [returnNavState, setReturnNavState] = useState<{
+    tab: 'home' | 'popular' | 'recent';
+    screen: ScreenId;
+  }>({
+    tab: 'home',
+    screen: 'screen1',
+  });
+
+  // Sound FX Mute state
+  const [isMuted, setIsMuted] = useState<boolean>(() => sounds.getMuted());
 
   // Real Firebase User Account & Session State
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Subscribe to live Firebase Auth state changes (persists across reloads & sessions)
+  // Subscribe to live Firebase Auth state changes
   useEffect(() => {
     const unsubscribe = subscribeToAuth((firebaseUser) => {
       setCurrentUser(firebaseUser);
@@ -41,8 +50,11 @@ export default function App() {
   useEffect(() => {
     const activeNames = ingredients.filter((i) => i.inPantry).map((i) => i.name);
     fetchSearchRecipes(activeNames).then((fetched) => {
-      if (fetched) {
+      if (fetched && fetched.length > 0) {
         setRecipes(fetched);
+        if (!selectedRecipe) {
+          setSelectedRecipe(fetched[0]);
+        }
       }
     });
   }, [ingredients]);
@@ -52,10 +64,27 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  const handleToggleMute = () => {
+    const muted = sounds.toggleMute();
+    setIsMuted(muted);
+    showToast(muted ? 'Sound FX Muted' : 'Sound FX Enabled 🔊');
+  };
+
   // Ingredient Handlers
   const handleToggleIngredient = (id: string) => {
     setIngredients((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, inPantry: !item.inPantry } : item))
+      prev.map((item) => {
+        if (item.id === id) {
+          const newState = !item.inPantry;
+          if (newState) {
+            sounds.playPop();
+          } else {
+            sounds.playPopDown();
+          }
+          return { ...item, inPantry: newState };
+        }
+        return item;
+      })
     );
   };
 
@@ -68,6 +97,7 @@ export default function App() {
       clayColor: '#81C784',
       inPantry: true,
     };
+    sounds.playPop(520);
     setIngredients((prev) => [newIng, ...prev]);
     showToast(`Added "${name}" to pantry bowl!`);
   };
@@ -75,6 +105,7 @@ export default function App() {
   // User Handlers
   const handleLoginSuccess = (user: UserAccount) => {
     setCurrentUser(user);
+    sounds.playSuccessFanfare();
     showToast(`Welcome back, ${user.name || user.email}!`);
   };
 
@@ -85,6 +116,7 @@ export default function App() {
       console.warn('Logout warning:', err);
     }
     setCurrentUser(null);
+    sounds.playTabSwitch();
     showToast('Logged out from account');
   };
 
@@ -92,6 +124,11 @@ export default function App() {
     const { updatedUser, isSaved } = toggleRecipeSave(currentUser, recipeId);
     if (updatedUser) {
       setCurrentUser(updatedUser);
+      if (isSaved) {
+        sounds.playHeart();
+      } else {
+        sounds.playPopDown();
+      }
       showToast(isSaved ? 'Saved to your recipes' : 'Removed from your recipes');
     }
   };
@@ -101,6 +138,7 @@ export default function App() {
     const updatedUser = removeRecipeFromSaved(currentUser, recipeId);
     if (updatedUser) {
       setCurrentUser(updatedUser);
+      sounds.playUnsave();
       const recipe = recipes.find((r) => r.id === recipeId);
       const title = recipe ? `"${recipe.title}"` : 'Recipe';
       showToast(`Removed ${title} from saved recipes`);
@@ -108,11 +146,39 @@ export default function App() {
   };
 
   const handleSelectRecipe = (r: Recipe) => {
+    sounds.playRecipeOpen();
+    setReturnNavState({
+      tab: activeNavTab,
+      screen: currentScreen,
+    });
     setSelectedRecipe(r);
     setCurrentScreen('screen5');
+
     if (currentUser) {
       const updatedUser = addRecipeToRecent(currentUser, r.id);
       if (updatedUser) setCurrentUser(updatedUser);
+    }
+  };
+
+  const handleBackFromRecipeDetail = () => {
+    sounds.playBack();
+    setActiveNavTab(returnNavState.tab);
+    setCurrentScreen(returnNavState.screen);
+  };
+
+  const handleNavigateToTab = (tab: 'home' | 'popular' | 'recent') => {
+    if (tab === 'home') {
+      sounds.playHomeTab();
+      setActiveNavTab('home');
+      setCurrentScreen('screen1');
+    } else if (tab === 'popular') {
+      sounds.playFlameTab();
+      setActiveNavTab('popular');
+      if (currentScreen === 'screen5') setCurrentScreen('screen1');
+    } else if (tab === 'recent') {
+      sounds.playClockTab();
+      setActiveNavTab('recent');
+      if (currentScreen === 'screen5') setCurrentScreen('screen1');
     }
   };
 
@@ -120,71 +186,95 @@ export default function App() {
     <div className="w-full h-[100dvh] max-h-[100dvh] bg-[#FAF7F2] flex flex-col items-center justify-start overflow-hidden select-none">
       {/* Pure Mobile App Container - Sized to exact dynamic viewport height */}
       <main className="w-full max-w-md h-full flex flex-col relative overflow-hidden bg-[#FAF7F2]">
+        
+        {/* Top Sound Control Bubble */}
+        <button
+          onClick={handleToggleMute}
+          className="absolute top-3 right-3 z-50 w-8 h-8 rounded-full clay-card-porcelain flex items-center justify-center text-slate-600 hover:text-[#FF5500] border border-white/80 shadow-sm transition-transform active:scale-95 cursor-pointer backdrop-blur-md"
+          title={isMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
+          aria-label={isMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
+        >
+          {isMuted ? (
+            <VolumeX className="w-4 h-4 text-slate-400" />
+          ) : (
+            <Volume2 className="w-4 h-4 text-[#FF5500] animate-pulse" />
+          )}
+        </button>
+
         <div className="flex-1 overflow-hidden relative flex flex-col">
-          {activeNavTab === 'home' && (
+          {/* If currentScreen is screen5 (Recipe Detail / Cooking), show it with proper back handling */}
+          {currentScreen === 'screen5' && selectedRecipe ? (
+            <Screen5RecipeDetailCooking
+              recipe={selectedRecipe}
+              onBack={handleBackFromRecipeDetail}
+              isSaved={currentUser ? currentUser.savedRecipeIds.includes(selectedRecipe.id) : false}
+              onToggleSave={handleToggleSaveRecipe}
+            />
+          ) : (
             <>
-              {currentScreen === 'screen1' && (
-                <Screen1IngredientInput
-                  ingredients={ingredients}
-                  onToggleIngredient={handleToggleIngredient}
-                  onAddCustomIngredient={handleAddCustomIngredient}
-                  onNavigateToResults={() => setCurrentScreen('screen2')}
-                  onSelectScreen={setCurrentScreen}
+              {/* Tab 1: Home Screens */}
+              {activeNavTab === 'home' && (
+                <>
+                  {currentScreen === 'screen1' && (
+                    <Screen1IngredientInput
+                      ingredients={ingredients}
+                      onToggleIngredient={handleToggleIngredient}
+                      onAddCustomIngredient={handleAddCustomIngredient}
+                      onNavigateToResults={() => {
+                        sounds.playSizzle();
+                        setCurrentScreen('screen2');
+                      }}
+                      onSelectScreen={setCurrentScreen}
+                      recipes={recipes}
+                      onSelectRecipe={handleSelectRecipe}
+                      currentUser={currentUser}
+                      onLoginSuccess={handleLoginSuccess}
+                      onLogout={handleLogout}
+                      onToggleSaveRecipe={handleToggleSaveRecipe}
+                      onRemoveSavedRecipe={handleRemoveSavedRecipe}
+                      savedRecipeIds={currentUser ? currentUser.savedRecipeIds : []}
+                      recentRecipeIds={currentUser ? currentUser.recentRecipeIds : []}
+                    />
+                  )}
+
+                  {currentScreen === 'screen2' && (
+                    <Screen2RecipeResults
+                      recipes={recipes}
+                      onSelectRecipe={handleSelectRecipe}
+                      onBackToInput={() => {
+                        sounds.playTabSwitch();
+                        setCurrentScreen('screen1');
+                      }}
+                      activePantryNames={ingredients.filter((i) => i.inPantry).map((i) => i.name)}
+                    />
+                  )}
+                </>
+              )}
+
+              {/* Tab 2: Popular Recipes Screen */}
+              {activeNavTab === 'popular' && (
+                <PopularRecipesScreen
                   recipes={recipes}
-                  onSelectRecipe={handleSelectRecipe}
-                  currentUser={currentUser}
-                  onLoginSuccess={handleLoginSuccess}
-                  onLogout={handleLogout}
+                  savedRecipeIds={currentUser ? currentUser.savedRecipeIds : []}
                   onToggleSaveRecipe={handleToggleSaveRecipe}
-                  onRemoveSavedRecipe={handleRemoveSavedRecipe}
+                  onSelectRecipe={handleSelectRecipe}
+                />
+              )}
+
+              {/* Tab 3: Recent & Saved Screen */}
+              {activeNavTab === 'recent' && (
+                <RecentRecipesScreen
+                  recipes={recipes}
                   savedRecipeIds={currentUser ? currentUser.savedRecipeIds : []}
                   recentRecipeIds={currentUser ? currentUser.recentRecipeIds : []}
-                />
-              )}
-
-              {currentScreen === 'screen2' && (
-                <Screen2RecipeResults
-                  recipes={recipes}
+                  onToggleSaveRecipe={handleToggleSaveRecipe}
+                  onRemoveSavedRecipe={handleRemoveSavedRecipe}
                   onSelectRecipe={handleSelectRecipe}
-                  onBackToInput={() => setCurrentScreen('screen1')}
-                  activePantryNames={ingredients.filter((i) => i.inPantry).map((i) => i.name)}
-                />
-              )}
-
-              {currentScreen === 'screen5' && (
-                <Screen5RecipeDetailCooking
-                  recipe={selectedRecipe}
-                  onBack={() => setCurrentScreen('screen2')}
-                  isSaved={currentUser ? currentUser.savedRecipeIds.includes(selectedRecipe.id) : false}
-                  onToggleSave={handleToggleSaveRecipe}
+                  onNavigateToPopular={() => handleNavigateToTab('popular')}
+                  onNavigateToHome={() => handleNavigateToTab('home')}
                 />
               )}
             </>
-          )}
-
-          {activeNavTab === 'popular' && (
-            <PopularRecipesScreen
-              recipes={recipes}
-              savedRecipeIds={currentUser ? currentUser.savedRecipeIds : []}
-              onToggleSaveRecipe={handleToggleSaveRecipe}
-              onSelectRecipe={handleSelectRecipe}
-            />
-          )}
-
-          {activeNavTab === 'recent' && (
-            <RecentRecipesScreen
-              recipes={recipes}
-              savedRecipeIds={currentUser ? currentUser.savedRecipeIds : []}
-              recentRecipeIds={currentUser ? currentUser.recentRecipeIds : []}
-              onToggleSaveRecipe={handleToggleSaveRecipe}
-              onRemoveSavedRecipe={handleRemoveSavedRecipe}
-              onSelectRecipe={handleSelectRecipe}
-              onNavigateToPopular={() => setActiveNavTab('popular')}
-              onNavigateToHome={() => {
-                setActiveNavTab('home');
-                setCurrentScreen('screen1');
-              }}
-            />
           )}
         </div>
 
@@ -194,10 +284,7 @@ export default function App() {
             {/* Tab 1: Home */}
             <button
               type="button"
-              onClick={() => {
-                setActiveNavTab('home');
-                setCurrentScreen('screen1');
-              }}
+              onClick={() => handleNavigateToTab('home')}
               className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${
                 activeNavTab === 'home' && currentScreen === 'screen1'
                   ? 'text-[#FF5500]'
@@ -227,7 +314,7 @@ export default function App() {
             {/* Tab 2: Popular Recipes */}
             <button
               type="button"
-              onClick={() => setActiveNavTab('popular')}
+              onClick={() => handleNavigateToTab('popular')}
               className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${
                 activeNavTab === 'popular'
                   ? 'text-[#FF5500]'
@@ -255,7 +342,7 @@ export default function App() {
             {/* Tab 3: Recent */}
             <button
               type="button"
-              onClick={() => setActiveNavTab('recent')}
+              onClick={() => handleNavigateToTab('recent')}
               className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${
                 activeNavTab === 'recent'
                   ? 'text-[#FF5500]'

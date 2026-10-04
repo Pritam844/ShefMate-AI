@@ -27,6 +27,7 @@ import {
   mapPredictionToIngredient,
   ClassifiedIngredient,
 } from '../../services/ingredientClassifier';
+import { sounds } from '../../services/soundService';
 
 interface Props {
   ingredients: Ingredient[];
@@ -119,6 +120,7 @@ export const Screen1IngredientInput: React.FC<Props> = ({
   };
 
   const handleOpenScanner = () => {
+    sounds.playCameraShutter();
     setIsScannerOpen(true);
     setScanFeedback(null);
     setCapturedImagePreview(null);
@@ -231,6 +233,7 @@ export const Screen1IngredientInput: React.FC<Props> = ({
       recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
+        sounds.playMicStart();
         setIsListening(true);
         setVoiceToast('🎙️ Listening... speak ingredient now');
       };
@@ -613,6 +616,7 @@ export const Screen1IngredientInput: React.FC<Props> = ({
                 {selectedIngredients.length > 0 ? (
                   <button
                     onClick={() => {
+                      sounds.playSwoosh();
                       selectedIngredients.forEach((i) => onToggleIngredient(i.id));
                     }}
                     className="text-[11px] font-medium text-slate-400 hover:text-[#FF5500] transition-colors cursor-pointer"
@@ -622,6 +626,7 @@ export const Screen1IngredientInput: React.FC<Props> = ({
                 ) : (
                   <button
                     onClick={() => {
+                      sounds.playSparkle();
                       ingredients.slice(0, 5).forEach((i) => {
                         if (!i.inPantry) onToggleIngredient(i.id);
                       });

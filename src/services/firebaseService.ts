@@ -436,14 +436,14 @@ export async function fetchSearchRecipes(activePantryNames: string[] = []): Prom
           };
         });
 
-      // Combine curated recipes with catalog
-      const combined = [...evaluatedCurated, ...parsed];
+      // Use real database recipes directly without prepending demo data
+      const sourceRecipes = parsed.length > 0 ? parsed : evaluatedCurated;
 
       // When user has selected pantry ingredients:
       // ONLY include recipes that actually use the user's selected ingredients!
-      let finalRecipes = combined;
+      let finalRecipes = sourceRecipes;
       if (activePantryNames.length > 0) {
-        finalRecipes = combined.filter((r) => {
+        finalRecipes = sourceRecipes.filter((r) => {
           const userMatches = r.ingredients.filter((i) => !isCommonStaple(i.name) && matchesUserPantry(i.name, activePantryNames)).length;
           return userMatches > 0 && r.missingCount <= 2;
         });

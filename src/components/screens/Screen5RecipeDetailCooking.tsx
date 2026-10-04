@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { Recipe } from '../../types/snackhack';
 import { resolveRecipeYoutubeId } from '../../services/firebaseService';
+import { sounds } from '../../services/soundService';
 
 interface Props {
   recipe: Recipe;
@@ -428,6 +429,7 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
 
   // 2. SHARE BUTTON HANDLER
   const handleOpenShare = async () => {
+    sounds.playShare();
     const recipeUrl = `${window.location.origin}/#recipe-${recipe.id}`;
     const shareData = {
       title: `${recipe.title} - ChefMate AI`,
@@ -448,6 +450,7 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
   };
 
   const handleCopyLink = async () => {
+    sounds.playClick();
     const recipeUrl = `${window.location.origin}/#recipe-${recipe.id}`;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -463,6 +466,7 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
 
   // 3. ORDER MISSING INGREDIENTS HANDLERS
   const handleOpenOrderSheet = (item: { name: string; quantity: string } | null) => {
+    sounds.playCoin();
     if (item) {
       setSelectedOrderItem({ name: item.name, quantity: item.quantity, isAll: false });
     } else {
@@ -473,6 +477,7 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
   };
 
   const handlePlaceOrder = (app: DeliveryAppOption) => {
+    sounds.playCoin();
     const query = selectedOrderItem?.name || recipe.title;
     const targetUrl = `${app.baseUrl}${encodeURIComponent(query)}`;
 
@@ -955,7 +960,10 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
 
                   <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => setIsTimerRunning(!isTimerRunning)}
+                      onClick={() => {
+                        sounds.playTimerToggle(!isTimerRunning);
+                        setIsTimerRunning(!isTimerRunning);
+                      }}
                       className="w-8 h-8 rounded-lg bg-[#FF5500] text-white flex items-center justify-center shadow-sm hover:bg-[#E64400] transition-colors cursor-pointer"
                     >
                       {isTimerRunning ? (
@@ -966,6 +974,7 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
                     </button>
                     <button
                       onClick={() => {
+                        sounds.playTimerReset();
                         setIsTimerRunning(false);
                         setTimeLeft((activeStep.timerMinutes || 1) * 60);
                       }}
@@ -984,7 +993,14 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
       {/* Floating Bottom Step Action Bar */}
       <div className="absolute bottom-4 left-5 right-5 z-20">
         <button
-          onClick={() => handleStepDone(activeStepIndex)}
+          onClick={() => {
+            if (activeStepIndex === recipe.steps.length - 1) {
+              sounds.playSuccessFanfare();
+            } else {
+              sounds.playStepNext();
+            }
+            handleStepDone(activeStepIndex);
+          }}
           className="clay-btn-orange w-full py-3.5 px-6 rounded-full flex items-center justify-center gap-2 font-syne font-bold text-xs sm:text-sm tracking-wide shadow-xl active:scale-[0.98] transition-all cursor-pointer"
         >
           <span>

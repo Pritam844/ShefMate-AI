@@ -34,6 +34,8 @@ import {
 import { Recipe } from '../../types/snackhack';
 import { resolveRecipeYoutubeId } from '../../services/firebaseService';
 import { sounds } from '../../services/soundService';
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
+
 
 interface Props {
   recipe: Recipe;
@@ -228,53 +230,68 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
   const [isTtsPlaying, setIsTtsPlaying] = useState(false);
   const [ttsRate, setTtsRate] = useState<number>(1.0);
   const [autoAdvanceTts, setAutoAdvanceTts] = useState<boolean>(true);
+  const ttsSessionIdRef = useRef<number>(0);
 
   const activeStep = recipe.steps[activeStepIndex] || recipe.steps[0];
   const missingItems = ingredientList.filter((item) => !item.isAvailable);
 
-  const speakStep = (index: number) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      showToast('Text-to-Speech (TTS) is not supported in this browser.');
-      return;
-    }
-
-    window.speechSynthesis.cancel();
+  const speakStep = async (index: number) => {
     const step = recipe.steps[index];
     if (!step) {
       setIsTtsPlaying(false);
       return;
     }
 
+    const currentSession = ++ttsSessionIdRef.current;
+
+    try {
+      await TextToSpeech.stop().catch(() => {});
+    } catch {
+      // Ignore initial stop errors
+    }
+
+    if (ttsSessionIdRef.current !== currentSession) return;
+
     const textToRead = `Step ${index + 1}. ${step.instruction}. ${step.tip ? `Chef tip: ${step.tip}` : ''}`;
-    const utterance = new SpeechSynthesisUtterance(textToRead);
-    utterance.rate = ttsRate;
-    utterance.pitch = 1.0;
+    setIsTtsPlaying(true);
 
-    utterance.onstart = () => {
-      setIsTtsPlaying(true);
-    };
+    try {
+      await TextToSpeech.speak({
+        text: textToRead,
+        lang: 'en-US',
+        rate: ttsRate,
+        pitch: 1.0,
+        volume: 1.0,
+        category: 'ambient',
+      });
 
-    utterance.onend = () => {
-      if (autoAdvanceTts && index < recipe.steps.length - 1) {
-        setActiveStepIndex(index + 1);
-        setTimeout(() => speakStep(index + 1), 600);
-      } else {
-        setIsTtsPlaying(false);
+      if (ttsSessionIdRef.current === currentSession) {
+        if (autoAdvanceTts && index < recipe.steps.length - 1) {
+          setActiveStepIndex(index + 1);
+          setTimeout(() => {
+            if (ttsSessionIdRef.current === currentSession) {
+              speakStep(index + 1);
+            }
+          }, 600);
+        } else {
+          setIsTtsPlaying(false);
+        }
       }
-    };
-
-    utterance.onerror = () => {
-      setIsTtsPlaying(false);
-    };
-
-    window.speechSynthesis.speak(utterance);
+    } catch (error: any) {
+      console.warn('TTS playback error:', error);
+      if (ttsSessionIdRef.current === currentSession) {
+        setIsTtsPlaying(false);
+        if (error && error.message && !error.message.includes('cancel') && !error.message.includes('interrupted')) {
+          showToast('Text-to-Speech playback was unavailable.');
+        }
+      }
+    }
   };
 
   const handleToggleTts = () => {
     if (isTtsPlaying) {
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
+      ttsSessionIdRef.current++;
+      TextToSpeech.stop().catch(() => {});
       setIsTtsPlaying(false);
     } else {
       speakStep(activeStepIndex);
@@ -302,17 +319,15 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
   };
 
   const handleStopTts = () => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
+    ttsSessionIdRef.current++;
+    TextToSpeech.stop().catch(() => {});
     setIsTtsPlaying(false);
   };
 
   useEffect(() => {
     return () => {
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
+      ttsSessionIdRef.current++;
+      TextToSpeech.stop().catch(() => {});
     };
   }, []);
 
@@ -430,7 +445,7 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
   // 2. SHARE BUTTON HANDLER
   const handleOpenShare = async () => {
     sounds.playShare();
-    const recipeUrl = `${window.location.origin}/#recipe-${recipe.id}`;
+    const recipeUrl = `https://shefmateai-seven.vercel.app/#recipe-${recipe.id}`;
     const shareData = {
       title: `${recipe.title} - ChefMate AI`,
       text: `${recipe.title}: ${recipe.subtitle}. Ready in ${recipe.cookTimeMinutes} mins. Check out the recipe on ChefMate AI!`,
@@ -451,7 +466,7 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
 
   const handleCopyLink = async () => {
     sounds.playClick();
-    const recipeUrl = `${window.location.origin}/#recipe-${recipe.id}`;
+    const recipeUrl = `https://shefmateai-seven.vercel.app/#recipe-${recipe.id}`;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(recipeUrl);
@@ -1071,7 +1086,7 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
                 <input
                   type="text"
                   readOnly
-                  value={`${window.location.origin}/#recipe-${recipe.id}`}
+                  value={`https://shefmateai-seven.vercel.app/#recipe-${recipe.id}`}
                   className="flex-1 text-[11px] text-slate-600 bg-transparent px-2 outline-none truncate font-mono"
                 />
                 <button
@@ -1103,7 +1118,7 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
                 {/* WhatsApp */}
                 <a
                   href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                    `Check out this delicious recipe: ${recipe.title} (${recipe.cookTimeMinutes} mins) on ChefMate AI! ${window.location.origin}/#recipe-${recipe.id}`
+                    `Check out this delicious recipe: ${recipe.title} (${recipe.cookTimeMinutes} mins) on ChefMate AI! https://shefmateai-seven.vercel.app/#recipe-${recipe.id}`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -1118,7 +1133,7 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
                 {/* Telegram */}
                 <a
                   href={`https://t.me/share/url?url=${encodeURIComponent(
-                    `${window.location.origin}/#recipe-${recipe.id}`
+                    `https://shefmateai-seven.vercel.app/#recipe-${recipe.id}`
                   )}&text=${encodeURIComponent(`${recipe.title} - ${recipe.subtitle}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -1150,7 +1165,7 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
                   href={`mailto:?subject=${encodeURIComponent(
                     `Recipe: ${recipe.title}`
                   )}&body=${encodeURIComponent(
-                    `Hey! Check out this recipe on ChefMate AI: ${recipe.title}\n\n${recipe.subtitle}\nCook time: ${recipe.cookTimeMinutes} mins\n\nLink: ${window.location.origin}/#recipe-${recipe.id}`
+                    `Hey! Check out this recipe on ChefMate AI: ${recipe.title}\n\n${recipe.subtitle}\nCook time: ${recipe.cookTimeMinutes} mins\n\nLink: https://shefmateai-seven.vercel.app/#recipe-${recipe.id}`
                   )}`}
                   className="p-2.5 rounded-2xl clay-card-porcelain flex flex-col items-center justify-center hover:border-red-300 transition-all active:scale-95 cursor-pointer"
                 >

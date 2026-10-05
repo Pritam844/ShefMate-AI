@@ -691,6 +691,11 @@ class SoundService {
       osc.stop(now + 0.035);
     } catch {}
   }
+
+  /** 24. Tab Switch Sound */
+  public playTabSwitch() {
+    this.playClick();
+  }
 }
 
 export const sounds = new SoundService();

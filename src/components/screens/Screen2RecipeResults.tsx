@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Clock, Flame, ChevronRight, ArrowLeft, Search, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Clock, Flame, ChevronRight, ArrowLeft, Search, X, CheckCircle2, AlertCircle, Heart } from 'lucide-react';
 import { Recipe } from '../../types/snackhack';
 import { sounds } from '../../services/soundService';
 
@@ -8,6 +8,8 @@ interface Props {
   onSelectRecipe: (recipe: Recipe) => void;
   onBackToInput: () => void;
   activePantryNames?: string[];
+  savedRecipeIds?: string[];
+  onToggleSaveRecipe?: (recipeId: string) => void;
 }
 
 export const Screen2RecipeResults: React.FC<Props> = ({
@@ -15,6 +17,8 @@ export const Screen2RecipeResults: React.FC<Props> = ({
   onSelectRecipe,
   onBackToInput,
   activePantryNames = [],
+  savedRecipeIds = [],
+  onToggleSaveRecipe,
 }) => {
   const [filterMode, setFilterMode] = useState<'All' | 'Ready' | 'Missing1' | 'Under10m' | 'Catalog'>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -148,11 +152,10 @@ export const Screen2RecipeResults: React.FC<Props> = ({
               sounds.playFilterClick();
               setFilterMode(item.id as any);
             }}
-            className={`px-3 py-1.5 text-xs font-bold rounded-xl whitespace-nowrap transition-all cursor-pointer ${
-              filterMode === item.id
+            className={`px-3 py-1.5 text-xs font-bold rounded-xl whitespace-nowrap transition-all cursor-pointer ${filterMode === item.id
                 ? 'clay-chip-active shadow-sm'
                 : 'clay-chip-default text-slate-600 hover:text-[#FF5500]'
-            }`}
+              }`}
           >
             {item.label}
           </button>
@@ -175,10 +178,10 @@ export const Screen2RecipeResults: React.FC<Props> = ({
               {filterMode === 'All' && hasActivePantry
                 ? 'Try adding more pantry staples (like potatoes, bread, or eggs), or view delicious recipes missing just 1-2 items below!'
                 : filterMode === 'Ready'
-                ? 'No recipes have 100% ingredients in your pantry. Try "Missing 1-2 Items" to order missing staples fast!'
-                : filterMode === 'Under10m'
-                ? 'No recipes under 10 minutes match your current ingredients.'
-                : 'Try clearing your search or switching filter tabs.'}
+                  ? 'No recipes have 100% ingredients in your pantry. Try "Missing 1-2 Items" to order missing staples fast!'
+                  : filterMode === 'Under10m'
+                    ? 'No recipes under 10 minutes match your current ingredients.'
+                    : 'Try clearing your search or switching filter tabs.'}
             </p>
             <div className="pt-2 flex items-center justify-center gap-2">
               {missing1Count > 0 && (
@@ -206,6 +209,7 @@ export const Screen2RecipeResults: React.FC<Props> = ({
         {filteredRecipes.map((recipe) => {
           const isFullMatch = recipe.missingCount === 0;
           const missingItem = recipe.ingredients.find((i) => !i.isAvailable);
+          const isSaved = savedRecipeIds.includes(recipe.id);
 
           return (
             <div
@@ -248,8 +252,33 @@ export const Screen2RecipeResults: React.FC<Props> = ({
                     </button>
                   )}
 
-                  <div className="px-2.5 py-1 rounded-full bg-black/50 text-white text-[11px] font-bold backdrop-blur-md">
-                    ★ {recipe.rating}
+                  <div className="flex items-center gap-1.5 pointer-events-auto">
+                    <div className="px-2.5 py-1 rounded-full bg-black/50 text-white text-[11px] font-bold backdrop-blur-md">
+                      ★ {recipe.rating}
+                    </div>
+
+                    {onToggleSaveRecipe && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleSaveRecipe(recipe.id);
+                        }}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md border transition-all active:scale-90 cursor-pointer shadow-sm ${
+                          isSaved
+                            ? 'bg-white text-[#FF5500] border-white shadow-[#FF5500]/30'
+                            : 'bg-black/35 text-white border-white/40 hover:bg-black/50'
+                        }`}
+                        title={isSaved ? 'Remove from Saved' : 'Save Recipe'}
+                        aria-label={isSaved ? 'Remove from Saved' : 'Save Recipe'}
+                      >
+                        <Heart
+                          className={`w-3.5 h-3.5 transition-transform ${
+                            isSaved ? 'fill-[#FF5500] text-[#FF5500] scale-110' : 'text-white hover:scale-110'
+                          }`}
+                        />
+                      </button>
+                    )}
                   </div>
                 </div>
 

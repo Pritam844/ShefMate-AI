@@ -14,6 +14,7 @@ import { Screen2RecipeResults } from './components/screens/Screen2RecipeResults'
 import { Screen5RecipeDetailCooking } from './components/screens/Screen5RecipeDetailCooking';
 import { PopularRecipesScreen } from './components/screens/PopularRecipesScreen';
 import { RecentRecipesScreen } from './components/screens/RecentRecipesScreen';
+import { AccountModal } from './components/AccountModal';
 
 export default function App() {
   const [ingredients, setIngredients] = useState<Ingredient[]>(INITIAL_INGREDIENTS);
@@ -38,9 +39,34 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Global Account / Login Modal State
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+
+  // Pending recipe ID to save after login (persisted in state & localStorage)
+  const [pendingRecipeIdToSave, setPendingRecipeIdToSave] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('chefmate_pending_recipe_save');
+    } catch {
+      return null;
+    }
+  });
+
   // Subscribe to live Firebase Auth state changes
   useEffect(() => {
     const unsubscribe = subscribeToAuth((firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const pendingId = localStorage.getItem('chefmate_pending_recipe_save');
+          if (pendingId) {
+            const { updatedUser } = toggleRecipeSave(firebaseUser, pendingId);
+            localStorage.removeItem('chefmate_pending_recipe_save');
+            setPendingRecipeIdToSave(null);
+            setCurrentUser(updatedUser || firebaseUser);
+            showToast('Pending recipe saved to favorites! ❤️');
+            return;
+          }
+        } catch { }
+      }
       setCurrentUser(firebaseUser);
     });
     return () => unsubscribe();
@@ -104,9 +130,26 @@ export default function App() {
 
   // User Handlers
   const handleLoginSuccess = (user: UserAccount) => {
-    setCurrentUser(user);
     sounds.playSuccessFanfare();
-    showToast(`Welcome back, ${user.name || user.email}!`);
+    let userToSet = user;
+    // Step 3: Upon successful login, automatically trigger the save action for the pending recipe
+    const pendingId = pendingRecipeIdToSave || localStorage.getItem('chefmate_pending_recipe_save');
+    if (pendingId) {
+      const { updatedUser } = toggleRecipeSave(user, pendingId);
+      if (updatedUser) {
+        userToSet = updatedUser;
+      }
+      setPendingRecipeIdToSave(null);
+      try {
+        localStorage.removeItem('chefmate_pending_recipe_save');
+      } catch { }
+      const savedRec = recipes.find((r) => r.id === pendingId);
+      showToast(savedRec ? `"${savedRec.title}" saved to your collection! ❤️` : 'Recipe saved to favorites! ❤️');
+    } else {
+      showToast(`Welcome back, ${user.name || user.email}!`);
+    }
+    setCurrentUser(userToSet);
+    setIsAccountModalOpen(false);
   };
 
   const handleLogout = async () => {
@@ -121,6 +164,19 @@ export default function App() {
   };
 
   const handleToggleSaveRecipe = (recipeId: string) => {
+    // Step 1: Check user's authentication state
+    if (!currentUser) {
+      // Step 2: If user is not logged in, intercept action, save intended recipe ID to temporary state & localStorage, and redirect to login
+      setPendingRecipeIdToSave(recipeId);
+      try {
+        localStorage.setItem('chefmate_pending_recipe_save', recipeId);
+      } catch { }
+      setIsAccountModalOpen(true);
+      showToast('Please log in to save recipes to your favorites ❤️');
+      return;
+    }
+
+    // Step 4: If user is already logged in, execute the save action immediately as usual
     const { updatedUser, isSaved } = toggleRecipeSave(currentUser, recipeId);
     if (updatedUser) {
       setCurrentUser(updatedUser);
@@ -129,7 +185,7 @@ export default function App() {
       } else {
         sounds.playPopDown();
       }
-      showToast(isSaved ? 'Saved to your recipes' : 'Removed from your recipes');
+      showToast(isSaved ? 'Saved to your recipes ❤️' : 'Removed from your recipes');
     }
   };
 
@@ -186,21 +242,6 @@ export default function App() {
     <div className="w-full h-[100dvh] max-h-[100dvh] bg-[#FAF7F2] flex flex-col items-center justify-start overflow-hidden select-none">
       {/* Pure Mobile App Container - Sized to exact dynamic viewport height */}
       <main className="w-full max-w-md h-full flex flex-col relative overflow-hidden bg-[#FAF7F2]">
-        
-        {/* Top Sound Control Bubble */}
-        <button
-          onClick={handleToggleMute}
-          className="absolute top-3 right-3 z-50 w-8 h-8 rounded-full clay-card-porcelain flex items-center justify-center text-slate-600 hover:text-[#FF5500] border border-white/80 shadow-sm transition-transform active:scale-95 cursor-pointer backdrop-blur-md"
-          title={isMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
-          aria-label={isMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
-        >
-          {isMuted ? (
-            <VolumeX className="w-4 h-4 text-slate-400" />
-          ) : (
-            <Volume2 className="w-4 h-4 text-[#FF5500] animate-pulse" />
-          )}
-        </button>
-
         <div className="flex-1 overflow-hidden relative flex flex-col">
           {/* If currentScreen is screen5 (Recipe Detail / Cooking), show it with proper back handling */}
           {currentScreen === 'screen5' && selectedRecipe ? (
@@ -234,6 +275,7 @@ export default function App() {
                       onRemoveSavedRecipe={handleRemoveSavedRecipe}
                       savedRecipeIds={currentUser ? currentUser.savedRecipeIds : []}
                       recentRecipeIds={currentUser ? currentUser.recentRecipeIds : []}
+                      onRequestOpenAccount={() => setIsAccountModalOpen(true)}
                     />
                   )}
 
@@ -246,6 +288,8 @@ export default function App() {
                         setCurrentScreen('screen1');
                       }}
                       activePantryNames={ingredients.filter((i) => i.inPantry).map((i) => i.name)}
+                      savedRecipeIds={currentUser ? currentUser.savedRecipeIds : []}
+                      onToggleSaveRecipe={handleToggleSaveRecipe}
                     />
                   )}
                 </>
@@ -285,27 +329,24 @@ export default function App() {
             <button
               type="button"
               onClick={() => handleNavigateToTab('home')}
-              className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${
-                activeNavTab === 'home' && currentScreen === 'screen1'
-                  ? 'text-[#FF5500]'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
+              className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${activeNavTab === 'home' && currentScreen === 'screen1'
+                ? 'text-[#FF5500]'
+                : 'text-slate-400 hover:text-slate-600'
+                }`}
               title="Pantry Home"
               aria-label="Pantry Home"
             >
               <Home
-                className={`w-5 h-5 transition-transform ${
-                  activeNavTab === 'home' && currentScreen === 'screen1'
-                    ? 'scale-110 stroke-[2.5]'
-                    : 'stroke-[2]'
-                }`}
+                className={`w-5 h-5 transition-transform ${activeNavTab === 'home' && currentScreen === 'screen1'
+                  ? 'scale-110 stroke-[2.5]'
+                  : 'stroke-[2]'
+                  }`}
               />
               <span
-                className={`text-[10px] mt-0.5 tracking-tight ${
-                  activeNavTab === 'home' && currentScreen === 'screen1'
-                    ? 'font-extrabold text-[#FF5500]'
-                    : 'font-medium'
-                }`}
+                className={`text-[10px] mt-0.5 tracking-tight ${activeNavTab === 'home' && currentScreen === 'screen1'
+                  ? 'font-extrabold text-[#FF5500]'
+                  : 'font-medium'
+                  }`}
               >
                 Home
               </span>
@@ -315,25 +356,22 @@ export default function App() {
             <button
               type="button"
               onClick={() => handleNavigateToTab('popular')}
-              className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${
-                activeNavTab === 'popular'
-                  ? 'text-[#FF5500]'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
+              className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${activeNavTab === 'popular'
+                ? 'text-[#FF5500]'
+                : 'text-slate-400 hover:text-slate-600'
+                }`}
               title="Popular Recipes"
               aria-label="Popular Recipes"
             >
               <Flame
-                className={`w-5 h-5 transition-transform ${
-                  activeNavTab === 'popular'
-                    ? 'scale-110 fill-[#FF5500] stroke-[2.5]'
-                    : 'stroke-[2]'
-                }`}
+                className={`w-5 h-5 transition-transform ${activeNavTab === 'popular'
+                  ? 'scale-110 fill-[#FF5500] stroke-[2.5]'
+                  : 'stroke-[2]'
+                  }`}
               />
               <span
-                className={`text-[10px] mt-0.5 tracking-tight ${
-                  activeNavTab === 'popular' ? 'font-extrabold text-[#FF5500]' : 'font-medium'
-                }`}
+                className={`text-[10px] mt-0.5 tracking-tight ${activeNavTab === 'popular' ? 'font-extrabold text-[#FF5500]' : 'font-medium'
+                  }`}
               >
                 Popular
               </span>
@@ -343,23 +381,20 @@ export default function App() {
             <button
               type="button"
               onClick={() => handleNavigateToTab('recent')}
-              className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${
-                activeNavTab === 'recent'
-                  ? 'text-[#FF5500]'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
+              className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${activeNavTab === 'recent'
+                ? 'text-[#FF5500]'
+                : 'text-slate-400 hover:text-slate-600'
+                }`}
               title="Recent & Saved"
               aria-label="Recent & Saved"
             >
               <Clock
-                className={`w-5 h-5 transition-transform ${
-                  activeNavTab === 'recent' ? 'scale-110 stroke-[2.5]' : 'stroke-[2]'
-                }`}
+                className={`w-5 h-5 transition-transform ${activeNavTab === 'recent' ? 'scale-110 stroke-[2.5]' : 'stroke-[2]'
+                  }`}
               />
               <span
-                className={`text-[10px] mt-0.5 tracking-tight ${
-                  activeNavTab === 'recent' ? 'font-extrabold text-[#FF5500]' : 'font-medium'
-                }`}
+                className={`text-[10px] mt-0.5 tracking-tight ${activeNavTab === 'recent' ? 'font-extrabold text-[#FF5500]' : 'font-medium'
+                  }`}
               >
                 Recent
               </span>
@@ -375,6 +410,17 @@ export default function App() {
           <span className="text-xs font-bold text-[#181B22]">{toastMessage}</span>
         </div>
       )}
+
+      {/* Global Account / Login Modal */}
+      <AccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        currentUser={currentUser}
+        onLoginSuccess={handleLoginSuccess}
+        onLogout={handleLogout}
+        savedCount={currentUser ? currentUser.savedRecipeIds.length : 0}
+        recentCount={currentUser ? currentUser.recentRecipeIds.length : 0}
+      />
     </div>
   );
 }

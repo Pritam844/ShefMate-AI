@@ -15,9 +15,12 @@ import {
   Clock,
   Loader2,
   ShieldCheck,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { UserAccount } from '../types/snackhack';
 import { validateEmail, validatePassword } from '../services/userService';
+import { sounds } from '../services/soundService';
 import {
   loginWithEmail,
   signUpWithEmail,
@@ -58,6 +61,13 @@ export const AccountModal: React.FC<Props> = ({
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+
+  // Sound FX Preference State (Task 1: Sound controls in Account section)
+  const [isMuted, setIsMuted] = useState(() => sounds.getMuted());
+  const handleToggleMute = () => {
+    const next = sounds.toggleMute();
+    setIsMuted(next);
+  };
 
   if (!isOpen) return null;
 
@@ -233,6 +243,34 @@ export const AccountModal: React.FC<Props> = ({
             <div className="p-3 rounded-2xl bg-[#FFF6EE] border border-[#FFDFC6] text-xs text-[#993300] flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[#FF5500] shrink-0" />
               <span>Your recipes are securely synchronized to your Firebase account.</span>
+            </div>
+
+            {/* Sound & Audio Preferences Card (Task 1: Sound controls in Account section) */}
+            <div className="p-3.5 rounded-2xl bg-white border border-[#E9E4DC] flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                  isMuted ? 'bg-slate-100 text-slate-400' : 'bg-[#FFF0E6] text-[#FF5500]'
+                }`}>
+                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </div>
+                <div>
+                  <div className="text-xs font-syne font-bold text-[#181B22]">Sound FX & Audio Cues</div>
+                  <div className="text-[10px] text-slate-500">
+                    {isMuted ? 'Muted — Silent cooking mode' : 'Enabled — Tactile SFX & Voice'}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleMute}
+                className={`px-3 py-1.5 rounded-xl text-xs font-syne font-bold transition-all cursor-pointer ${
+                  isMuted
+                    ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-[#FF5500]/10 text-[#FF5500] hover:bg-[#FF5500]/20'
+                }`}
+              >
+                {isMuted ? 'Unmute 🔇' : 'Mute 🔊'}
+              </button>
             </div>
 
             {/* Action Buttons */}
@@ -575,6 +613,34 @@ export const AccountModal: React.FC<Props> = ({
                 </div>
               </form>
             )}
+
+            {/* Sound & Audio Preferences for Guests (Task 1: Sound preferences in Account section) */}
+            <div className="mt-4 p-3 rounded-2xl bg-white/80 border border-[#E9E4DC] flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                  isMuted ? 'bg-slate-100 text-slate-400' : 'bg-[#FFF0E6] text-[#FF5500]'
+                }`}>
+                  {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                </div>
+                <div>
+                  <div className="text-xs font-syne font-bold text-[#181B22]">Sound Effects & Voice</div>
+                  <div className="text-[10px] text-slate-500">
+                    {isMuted ? 'Muted' : 'Enabled 🔊'}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleMute}
+                className={`px-3 py-1 rounded-xl text-xs font-syne font-bold transition-all cursor-pointer ${
+                  isMuted
+                    ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-[#FF5500]/10 text-[#FF5500] hover:bg-[#FF5500]/20'
+                }`}
+              >
+                {isMuted ? 'Unmute 🔇' : 'Mute 🔊'}
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -413,13 +413,13 @@ export const Screen5RecipeDetailCooking: React.FC<Props> = ({
 
   // 1. HEART (SAVE) BUTTON HANDLER
   const handleToggleSave = () => {
-    const nextSavedState = !isSaved;
     if (onToggleSave) {
       onToggleSave(recipe.id);
-    } else {
-      setInternalIsSaved(nextSavedState);
+      return;
     }
 
+    const nextSavedState = !isSaved;
+    setInternalIsSaved(nextSavedState);
     if (nextSavedState) {
       showToast('Saved to your recipes');
     } else {

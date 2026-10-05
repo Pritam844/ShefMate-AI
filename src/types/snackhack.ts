@@ -11,13 +11,25 @@ export interface UserAccount {
   recentRecipeIds: string[];
 }
 
+export type IngredientCategory =
+  | 'Carbs'
+  | 'Dairy'
+  | 'Veggies'
+  | 'Protein'
+  | 'Spices'
+  | 'Sauces'
+  | 'Leftovers'
+  | 'Condiments'
+  | 'Snacks';
+
 export interface Ingredient {
   id: string;
   name: string;
-  category: 'Carbs' | 'Dairy' | 'Veggies' | 'Spices' | 'Sauces';
+  category: IngredientCategory;
   icon: string;
   clayColor: string;
   inPantry: boolean;
+  recommended?: boolean;
 }
 
 export interface QuickCommerceItem {

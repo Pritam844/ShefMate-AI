@@ -6,17 +6,60 @@ import toastImg from '../assets/images/snackhack_clay_toast_dish_1790778847795.j
 import nachosImg from '../assets/images/snackhack_clay_nachos_dish_1790778860040.jpg';
 
 export const INITIAL_INGREDIENTS: Ingredient[] = [
-  { id: 'ing_potato', name: 'Potatoes', category: 'Carbs', icon: '🥔', clayColor: '#E2BF84', inPantry: true },
-  { id: 'ing_cheese', name: 'Cheese Block', category: 'Dairy', icon: '🧀', clayColor: '#FFD152', inPantry: true },
-  { id: 'ing_bread', name: 'White Bread', category: 'Carbs', icon: '🍞', clayColor: '#DEAA79', inPantry: true },
-  { id: 'ing_butter', name: 'Salted Butter', category: 'Dairy', icon: '🧈', clayColor: '#FFE082', inPantry: true },
-  { id: 'ing_garlic', name: 'Garlic Pods', category: 'Veggies', icon: '🧄', clayColor: '#E6D7D2', inPantry: true },
-  { id: 'ing_chili', name: 'Chili Flakes', category: 'Spices', icon: '🌶️', clayColor: '#FF5733', inPantry: true },
-  { id: 'ing_tortilla', name: 'Tortilla Chips', category: 'Carbs', icon: '🌽', clayColor: '#F5B041', inPantry: false },
-  { id: 'ing_mozzarella', name: 'Mozzarella Block', category: 'Dairy', icon: '🧀', clayColor: '#FFF8E1', inPantry: false },
+  // ── Protein & Poultry (User-Specified) ────────────────────
+  { id: 'ing_chicken', name: 'Chicken (Boneless)', category: 'Protein', icon: '🍗', clayColor: '#D4A055', inPantry: false, recommended: true },
+  { id: 'ing_mutton', name: 'Mutton / Goat Meat', category: 'Protein', icon: '🥩', clayColor: '#A93226', inPantry: false, recommended: true },
+  { id: 'ing_lamb', name: 'Lamb', category: 'Protein', icon: '🥩', clayColor: '#B03A2E', inPantry: false, recommended: true },
+  { id: 'ing_egg', name: 'Eggs', category: 'Protein', icon: '🥚', clayColor: '#FFE0B2', inPantry: false, recommended: true },
+
+  // ── Dairy (User-Specified) ────────────────────────────────
+  { id: 'ing_paneer', name: 'Fresh Paneer', category: 'Dairy', icon: '🧀', clayColor: '#FFFDE7', inPantry: false, recommended: true },
+  { id: 'ing_curd', name: 'Yogurt / Curd', category: 'Dairy', icon: '🥛', clayColor: '#FFFDF0', inPantry: false, recommended: true },
+  { id: 'ing_sour_curd', name: 'Sour Curd (Khatta Dahi)', category: 'Dairy', icon: '🥣', clayColor: '#FDFEFE', inPantry: false, recommended: true },
+  { id: 'ing_malai', name: 'Malai (Milk Cream)', category: 'Dairy', icon: '🥛', clayColor: '#F7F9F9', inPantry: false, recommended: true },
+  { id: 'ing_cheese', name: 'Cheese Block', category: 'Dairy', icon: '🧀', clayColor: '#FFD152', inPantry: false },
+  { id: 'ing_butter', name: 'Salted Butter', category: 'Dairy', icon: '🧈', clayColor: '#FFE082', inPantry: false },
+
+  // ── Indian Vegetables & Fresh Produce (User-Specified) ───
+  { id: 'ing_ginger', name: 'Fresh Ginger', category: 'Veggies', icon: '🫚', clayColor: '#C8965A', inPantry: false, recommended: true },
+  { id: 'ing_garlic', name: 'Garlic Pods', category: 'Veggies', icon: '🧄', clayColor: '#E6D7D2', inPantry: false, recommended: true },
+  { id: 'ing_onion', name: 'Red Onions', category: 'Veggies', icon: '🧅', clayColor: '#CE93D8', inPantry: false, recommended: true },
+  { id: 'ing_tomato', name: 'Plum Tomatoes', category: 'Veggies', icon: '🍅', clayColor: '#E53935', inPantry: false, recommended: true },
+  { id: 'ing_potato', name: 'Potatoes', category: 'Carbs', icon: '🥔', clayColor: '#E2BF84', inPantry: false },
+
+  // ── Indian Spices & Aromatics (User-Specified) ────────────
+  { id: 'ing_chili', name: 'Green Chilies', category: 'Spices', icon: '🌶️', clayColor: '#4CAF50', inPantry: false, recommended: true },
+  { id: 'ing_coriander', name: 'Fresh Coriander', category: 'Spices', icon: '🌿', clayColor: '#66BB6A', inPantry: false, recommended: true },
+  { id: 'ing_cumin', name: 'Cumin / Jeera', category: 'Spices', icon: '✨', clayColor: '#8B6914', inPantry: false, recommended: true },
+  { id: 'ing_turmeric', name: 'Turmeric / Haldi', category: 'Spices', icon: '🟡', clayColor: '#FFC300', inPantry: false, recommended: true },
+  { id: 'ing_masala', name: 'Garam Masala', category: 'Spices', icon: '🧂', clayColor: '#8B3A0F', inPantry: false, recommended: true },
+  { id: 'ing_curry', name: 'Curry Powder / Masala', category: 'Spices', icon: '🍛', clayColor: '#D35400', inPantry: false, recommended: true },
+  { id: 'ing_chili_flakes', name: 'Chili Flakes', category: 'Spices', icon: '🌶️', clayColor: '#FF5733', inPantry: false },
   { id: 'ing_oregano', name: 'Oregano Flakes', category: 'Spices', icon: '🌿', clayColor: '#81C784', inPantry: false },
-  { id: 'ing_tomato', name: 'Plum Tomatoes', category: 'Veggies', icon: '🍅', clayColor: '#E53935', inPantry: false },
-  { id: 'ing_peri', name: 'Peri Peri Mix', category: 'Spices', icon: '✨', clayColor: '#FB8C00', inPantry: false },
+
+  // ── Leftovers & Smart Fridge Rescue (User-Specified) ──────
+  { id: 'ing_leftover_rice', name: 'Cooked White Rice (Chawal)', category: 'Leftovers', icon: '🍚', clayColor: '#FAFAFA', inPantry: false, recommended: true },
+  { id: 'ing_cooked_dal', name: 'Cooked Dal (Lentil Soup)', category: 'Leftovers', icon: '🥣', clayColor: '#F4D03F', inPantry: false, recommended: true },
+  { id: 'ing_boiled_potato', name: 'Boiled Potatoes', category: 'Leftovers', icon: '🥔', clayColor: '#E59866', inPantry: false, recommended: true },
+  { id: 'ing_stale_roti', name: 'Stale Roti / Chapati', category: 'Leftovers', icon: '🫓', clayColor: '#D2A679', inPantry: false, recommended: true },
+  { id: 'ing_bread_ends', name: 'Bread Ends / Slices', category: 'Leftovers', icon: '🍞', clayColor: '#DEAA79', inPantry: false, recommended: true },
+  { id: 'ing_leftover_dal', name: 'Yellow Dal (Cooked)', category: 'Leftovers', icon: '🥣', clayColor: '#F9E79F', inPantry: false, recommended: true },
+  { id: 'ing_leftover_sabzi', name: 'Dry Sabzi / Veggies', category: 'Leftovers', icon: '🥘', clayColor: '#D35400', inPantry: false, recommended: true },
+  { id: 'ing_bhuna_masala', name: 'Bhuna Masala (Onion-Tomato Paste)', category: 'Leftovers', icon: '🍛', clayColor: '#BA4A00', inPantry: false, recommended: true },
+  { id: 'ing_half_cut_veggies', name: 'Half-Cut Onion/Tomato/Lemon', category: 'Leftovers', icon: '🍋', clayColor: '#F7DC6F', inPantry: false, recommended: true },
+  { id: 'ing_coriander_stems', name: 'Coriander Stems', category: 'Leftovers', icon: '🌿', clayColor: '#52BE80', inPantry: false, recommended: true },
+  { id: 'ing_overripe_banana', name: 'Overripe Bananas', category: 'Leftovers', icon: '🍌', clayColor: '#F4D03F', inPantry: false, recommended: true },
+  { id: 'ing_dosa_batter', name: 'Idli / Dosa Batter', category: 'Leftovers', icon: '🥞', clayColor: '#EAEDED', inPantry: false, recommended: true },
+
+  // ── Condiments & Snacks (User-Specified) ──────────────────
+  { id: 'ing_green_chutney', name: 'Green Chutney', category: 'Condiments', icon: '🫙', clayColor: '#27AE60', inPantry: false, recommended: true },
+  { id: 'ing_achaar_masala', name: 'Achaar Masala (Pickle Oil)', category: 'Condiments', icon: '🍯', clayColor: '#E67E22', inPantry: false, recommended: true },
+  { id: 'ing_namkeen_crumbs', name: 'Namkeen / Sev Crumbs', category: 'Snacks', icon: '🥨', clayColor: '#F39C12', inPantry: false, recommended: true },
+  { id: 'ing_sauce', name: 'Tomato Ketchup', category: 'Sauces', icon: '🥫', clayColor: '#EF5350', inPantry: false },
+
+  // ── Additional Staples ───────────────────────────────────
+  { id: 'ing_bread', name: 'White Bread', category: 'Carbs', icon: '🍞', clayColor: '#DEAA79', inPantry: false },
+  { id: 'ing_tortilla', name: 'Tortilla Chips', category: 'Carbs', icon: '🫔', clayColor: '#F5B041', inPantry: false },
   { id: 'ing_noodles', name: 'Instant Noodles', category: 'Carbs', icon: '🍜', clayColor: '#FDD835', inPantry: false },
 ];
 
